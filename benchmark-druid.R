@@ -195,13 +195,13 @@ top_100_commitdate <- function(datasource) {
   )
 }
 
-group_by_high_card_partkey <- function(datasource) {
+group_by_suppkey <- function(datasource) {
   druid.query.groupBy(
     url = url,
     dataSource   = datasource,
     intervals    = interval(ymd(19960115), ymd(19980315)),
     metric = "l_quantity",
-    dimension = "l_partkey",
+    dimension = "l_suppkey",
     aggregations = list(
       sum(metric("l_quantity")),
       sum(metric("l_extendedprice"))
@@ -213,13 +213,13 @@ group_by_high_card_partkey <- function(datasource) {
   )
 }
 
-group_by_high_card_partkey_v2 <- function(datasource) {
+group_by_suppkey_v2 <- function(datasource) {
   druid.query.groupBy(
     url = url,
     dataSource   = datasource,
     intervals    = interval(ymd(19960115), ymd(19980315)),
     metric = "l_quantity",
-    dimension = "l_partkey",
+    dimension = "l_suppkey",
     aggregations = list(
       sum(metric("l_quantity")),
       sum(metric("l_extendedprice"))
@@ -240,8 +240,8 @@ res6 <- microbenchmark(top_100_parts(datasource), times=n)
 res7 <- microbenchmark(top_100_parts_details(datasource), times=n)
 res8 <- microbenchmark(top_100_parts_filter(datasource), times=n)
 res9 <- microbenchmark(top_100_commitdate(datasource), times=n)
-res10 <- microbenchmark(group_by_high_card_partkey(datasource), times=n)
-res11 <- microbenchmark(group_by_high_card_partkey_v2(datasource), times=n)
+res10 <- microbenchmark(group_by_suppkey(datasource), times=n)
+res11 <- microbenchmark(group_by_suppkey_v2(datasource), times=n)
 
 results <- as.data.frame(rbind(res1, res2, res3, res4, res5, res6, res7, res8, res9, res10, res11))
 results$time <- results$time / 1e9

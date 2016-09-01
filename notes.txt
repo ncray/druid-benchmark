@@ -1,21 +1,31 @@
 wget https://static.imply.io/support/imply-1.4.0-PREVIEW-605a99e-pivot-38e236d-tranquility-84ebf66-druid-f768a55.tar.gz
 tar xvf imply-1.4.0-PREVIEW-605a99e-pivot-38e236d-tranquility-84ebf66-druid-f768a55.tar.gz
 sudo apt-get update
-sudo apt-get install default-jre emacs24 r-base-core libcurl4-gnutls-dev
+sudo apt-get install default-jre emacs24 r-base-core libcurl4-gnutls-dev nodejs-legacy
 sudo apt-get -y build-dep libcurl4-gnutls-dev
 sudo apt-get -y install libcurl4-gnutls-dev
 sudo R -e 'install.packages(c("microbenchmark", "devtools"), repos="http://cran.us.r-project.org")'
 sudo R -e 'devtools::install_github("druid-io/RDruid")'
 
+git clone https://github.com/ncray/druid-benchmark.git
+
+cd druid-benchmark
+
 mkdir -p data
-pushd .
 cd data
+
+## 20GB
+for i in $(seq 1 20) ; do curl -O http://static.druid.io/data/benchmarks/tpch/100/lineitem.tbl.$i.gz ; done
 
 # 1GB data set
 curl -O http://static.druid.io/data/benchmarks/tpch/1/lineitem.tbl.gz
 
+
 cd imply-1.4.0-PREVIEW-605a99e-pivot-38e236d-tranquility-84ebf66-druid-f768a55
 bin/supervise -c conf/supervise/quickstart.conf
+
+cd imply-1.4.0-PREVIEW-605a99e-pivot-38e236d-tranquility-84ebf66-druid-f768a55
+bin/post-index-task --file ../druid-benchmark/lineitem.task.json
 
 
 /usr/bin/RScript ./benchmark-druid.R localhost tpch_lineitem_small foo 1
@@ -28,8 +38,29 @@ bin/post-index-task --file ../druid-benchmark/lineitem_small.task.json
 
 
 bq mk tpc_h
-for f in foo_*
+for f in lineitem.tbl.*.gz
 do
  echo "Processing $f"
  bq load -F "|" tpc_h.tbl $f l_orderkey:STRING,l_partkey:STRING,l_suppkey:STRING,l_linenumber:STRING,l_quantity:INTEGER,l_extendedprice:FLOAT,l_discount:FLOAT,l_tax:FLOAT,l_returnflag:STRING,l_linestatus:STRING,l_shipdate:DATE,l_commitdate:STRING,l_receiptdate:STRING,l_shipinstruct:STRING,l_shipmode:STRING,l_comment:STRING,dummy:STRING
 done
+
+
+bq load -F "|" tpc_h.tbl lineitem.tbl.1.gz l_orderkey:STRING,l_partkey:STRING,l_suppkey:STRING,l_linenumber:STRING,l_quantity:INTEGER,l_extendedprice:FLOAT,l_discount:FLOAT,l_tax:FLOAT,l_returnflag:STRING,l_linestatus:STRING,l_shipdate:DATE,l_commitdate:STRING,l_receiptdate:STRING,l_shipinstruct:STRING,l_shipmode:STRING,l_comment:STRING,dummy:STRING
+
+
+conf-quickstart/druid/historical/runtime.properties
+historical runtime properties
+
+
+druid.processing.numMergeBuffers=1
+druid.query.groupBy.maxOnDiskStorage=0
+
+druid.processing.buffer.sizeBytes=2000000000
+druid.processing.buffer.sizeBytes=536870912
+druid.processing.numThreads=20
+
+conf-quickstart/druid/historical/jvm.config
+-XX:MaxDirectMemorySize=44280m
+
+
+/usr/bin/Rscript ./benchmark-druid.R localhost tpch_lineitem foo 1
