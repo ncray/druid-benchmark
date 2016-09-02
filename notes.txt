@@ -53,7 +53,6 @@ bq load -F "|" tpc_h.tbl lineitem.tbl.1.gz l_orderkey:STRING,l_partkey:STRING,l_
 conf-quickstart/druid/historical/runtime.properties
 historical runtime properties
 
-
 druid.processing.numMergeBuffers=1
 druid.query.groupBy.maxOnDiskStorage=0
 
