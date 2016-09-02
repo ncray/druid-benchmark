@@ -30,6 +30,8 @@ bin/post-index-task --file ../druid-benchmark/lineitem.task.json
 
 /usr/bin/RScript ./benchmark-druid.R localhost tpch_lineitem_small foo 1
 
+/usr/bin/Rscript ./benchmark-druid.R localhost tpch_lineitem results/tpch_lineitem_druid 50
+
 
 bq query "SELECT avg(l_quantity) FROM [druid-benchmarking:tpc_h_1_gb.tbl]"
 
