@@ -1,0 +1,78 @@
+---
+title: "Druid Benchmarking Draft"
+output:
+  html_document:
+    toc: true
+    theme: spacelab
+    fig_width: 8
+    fig_height: 6
+    pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+author: Nelson Ray
+---
+
+# Intro
+
+# Setup
+
+Ran benchmarks on a 24 vCPUs, 156 GB GCE instance (2.2 GHz Intel Xeon E5 v4 Broadwell).
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(pander)
+
+panderOptions('table.split.table', Inf)
+theme_set(theme_bw())
+
+benchmarks = list(
+  `Druid (0.9.2 Preview)` = "tpch_lineitem_druid.tsv",
+  `Big Query`            = "big_query.tsv"
+)
+
+results <- NULL
+for(x in names(benchmarks)) {
+  filename <- file.path("results", benchmarks[[x]])
+  if(file.exists(filename)) {
+    r <- read.table(filename)
+    names(r) <- c("query", "time")
+    r$Engine <- x
+    results <- rbind(results, r)
+  }
+}
+
+results$rows <- 119994608
+
+results_summary <- ddply(results, .(Engine, query),
+                         summarise,
+                         time = median(time),
+                         rps=median(rows/time),
+                         count=length(query))
+results_summary$type <- "aggregation"
+results_summary$type[grep("top", results_summary$query)] <- "top-n"
+
+```
+
+```{r}
+ggplot(results, aes(x = query, y = time, color = Engine)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = -90)) +
+  ylab('Query Time (Seconds)') +
+  xlab('Query')
+```
+
+```{r}
+results %>%
+  group_by(query, Engine) %>%
+  summarize(`Number of Queries` = n(),
+            `Mean Query Time (Seconds)` = round(mean(time), 3),
+            `Standard Deviation of Query Times (Seconds)` = round(sd(time), 3)) %>%
+  group_by(query) %>%
+  mutate(`Relative Query Time (1 = Druid)` = `Mean Query Time (Seconds)` / `Mean Query Time (Seconds)`[`Engine` == 'Druid (0.9.2 Preview)']) %>%
+  as.data.frame %>%
+  pander
+```
